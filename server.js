@@ -1,75 +1,81 @@
-import express from 'express'
-import formidable from 'formidable'
-import fs from 'fs'
-import exifr from 'exifr'
-const { parse } = exifr
-import { createClient } from '@sanity/client'
-import cors from 'cors'
-import dotenv from 'dotenv'
+import express from "express";
+import formidable from "formidable";
+import fs from "fs";
+import exifr from "exifr";
+const { parse } = exifr;
+import { createClient } from "@sanity/client";
+import cors from "cors";
+import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
-const app = express()
+const app = express();
 
 // ✅ Add full CORS middleware
-app.use(cors({
-  origin: 'https://mgphoto-new.vercel.app',
-  methods: ['POST', 'OPTIONS'],
-}))
+app.use(
+  cors({
+    origin: "https://mgphoto-new.vercel.app",
+    methods: ["POST", "OPTIONS"],
+  })
+);
 
 // ✅ Allow preflight OPTIONS on /upload
-app.options('/upload', cors())
+app.options("/upload", cors());
 
 const client = createClient({
   projectId: process.env.SANITY_PROJECT_ID,
   dataset: process.env.SANITY_DATASET,
   token: process.env.SANITY_API_TOKEN,
-  apiVersion: '2023-08-03',
+  apiVersion: "2023-08-03",
   useCdn: false,
-})
+});
 
-app.post('/upload', (req, res) => {
-  const form = formidable({ multiples: false, keepExtensions: true })
+app.post("/upload", (req, res) => {
+  const form = formidable({ multiples: false, keepExtensions: true });
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      console.error('Form parse error:', err)
-      return res.status(500).json({ error: 'Upload error' })
+      console.error("Form parse error:", err);
+      return res.status(500).json({ error: "Upload error" });
     }
 
-    console.log('🧾 Form fields:', fields)
-    console.log('📁 Form files:', files)
+    console.log("🧾 Form fields:", fields);
+    console.log("📁 Form files:", files);
 
-    const file = files?.file
+    const file = Array.isArray(files?.file) ? files.file[0] : files?.file;
+    const eventSlug = Array.isArray(fields.eventSlug)
+      ? fields.eventSlug[0]
+      : fields.eventSlug;
+
     if (!file || !file.filepath) {
-      console.error('🚫 No valid file received')
-      return res.status(400).json({ error: 'No file received' })
+      console.error("🚫 No valid file received");
+      return res.status(400).json({ error: "No file received" });
     }
 
     try {
-      const buffer = fs.readFileSync(file.filepath)
-      const exif = await parse(buffer)
-      const takenAt = exif?.DateTimeOriginal || new Date().toISOString()
+      const buffer = fs.readFileSync(file.filepath);
+      const exif = await parse(buffer);
+      const takenAt = exif?.DateTimeOriginal || new Date().toISOString();
 
-      const asset = await client.assets.upload('image', buffer, {
+      const asset = await client.assets.upload("image", buffer, {
         filename: file.originalFilename,
-      })
+      });
 
       const doc = await client.create({
-        _type: 'photo',
-        image: { asset: { _ref: asset._id, _type: 'reference' } },
+        _type: "photo",
+        image: { asset: { _ref: asset._id, _type: "reference" } },
         takenAt,
         createdAt: new Date().toISOString(),
-        eventSlug: fields.eventSlug || 'unknown',
-      })
+        eventSlug: eventSlug || "unknown",
+      });
 
-      console.log('✅ Upload successful:', doc._id)
-      res.status(200).json({ success: true, docId: doc._id })
+      console.log("✅ Upload successful:", doc._id);
+      res.status(200).json({ success: true, docId: doc._id });
     } catch (err) {
-      console.error('Upload failed:', err)
-      res.status(500).json({ error: 'Sanity upload failed' })
+      console.error("Upload failed:", err);
+      res.status(500).json({ error: "Sanity upload failed" });
     }
-  })
-})
+  });
+});
 
-app.listen(3000, () => console.log('Upload server running on port 3000'))
+app.listen(3000, () => console.log("Upload server running on port 3000"));
