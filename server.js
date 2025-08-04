@@ -33,12 +33,14 @@ app.post('/upload', (req, res) => {
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      console.error('Formidable error:', err)
+      console.error('Form parse error:', err)
       return res.status(500).json({ error: 'Upload error' })
     }
 
-    const file = files.file
-    if (!file) return res.status(400).json({ error: 'No file uploaded' })
+    const file = files?.file
+    if (!file || !file.filepath) {
+      return res.status(400).json({ error: 'No file received' })
+    }
 
     try {
       const buffer = fs.readFileSync(file.filepath)
