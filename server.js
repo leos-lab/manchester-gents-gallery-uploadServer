@@ -68,7 +68,9 @@ app.post("/upload", (req, res) => {
       );
 
       if (!eventRef?._id) {
-        return res.status(404).json({ error: "Event not found for given slug" });
+        return res
+          .status(404)
+          .json({ error: "Event not found for given slug" });
       }
 
       // 📤 Upload asset
@@ -79,7 +81,7 @@ app.post("/upload", (req, res) => {
       // 📝 Create photo document with filename as `name`
       const doc = await client.create({
         _type: "photo",
-        name: file.originalFilename || "Untitled",
+        name: file.originalFilename, // ✅ assign the filename here
         image: { asset: { _ref: asset._id, _type: "reference" } },
         takenAt,
         createdAt: new Date().toISOString(),
