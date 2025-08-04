@@ -1,8 +1,8 @@
 import express from 'express'
 import formidable from 'formidable'
 import fs from 'fs'
-import exifr from 'exifr' // ← FIXED
-const { parse } = exifr   // ← FIXED
+import exifr from 'exifr'
+const { parse } = exifr
 import { createClient } from '@sanity/client'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -10,11 +10,15 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const app = express()
+
+// ✅ Add full CORS middleware
 app.use(cors({
   origin: 'https://mgphoto-new.vercel.app',
-  methods: ['POST'],
+  methods: ['POST', 'OPTIONS'],
 }))
 
+// ✅ Allow preflight OPTIONS on /upload
+app.options('/upload', cors())
 
 const client = createClient({
   projectId: process.env.SANITY_PROJECT_ID,
