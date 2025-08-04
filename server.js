@@ -11,6 +11,7 @@ dotenv.config();
 
 const app = express();
 
+// CORS for Vercel + localhost
 app.use(
   cors({
     origin: ["https://mgphoto-new.vercel.app", "http://localhost:3000"],
@@ -18,6 +19,7 @@ app.use(
   })
 );
 
+// Preflight OPTIONS handler
 app.options("/upload", cors());
 
 const client = createClient({
@@ -59,7 +61,7 @@ app.post("/upload", (req, res) => {
       const exif = await parse(buffer);
       const takenAt = exif?.DateTimeOriginal || new Date().toISOString();
 
-      // 🔍 Fetch event document _id by slug
+      // 🔍 Find the event document by slug
       const eventRef = await client.fetch(
         '*[_type == "event" && slug.current == $slug][0]{ _id }',
         { slug: eventSlug }
@@ -69,14 +71,15 @@ app.post("/upload", (req, res) => {
         return res.status(404).json({ error: "Event not found for given slug" });
       }
 
-      // 📤 Upload image asset
+      // 📤 Upload asset
       const asset = await client.assets.upload("image", buffer, {
         filename: file.originalFilename,
       });
 
-      // 📝 Create photo document with reference to event
+      // 📝 Create photo document with filename as `name`
       const doc = await client.create({
         _type: "photo",
+        name: file.originalFilename || "Untitled",
         image: { asset: { _ref: asset._id, _type: "reference" } },
         takenAt,
         createdAt: new Date().toISOString(),
@@ -95,4 +98,4 @@ app.post("/upload", (req, res) => {
   });
 });
 
-app.listen(3000, () => console.log("Upload server running on port 3000"));
+app.listen(3000, () => console.log("🚀 Upload server running on port 3000"));
