@@ -1,7 +1,8 @@
 import express from 'express'
 import formidable from 'formidable'
 import fs from 'fs'
-import { parse } from 'exifr'
+import exifr from 'exifr'
+const { parse } = exifr
 import { createClient } from '@sanity/client'
 import cors from 'cors'
 import dotenv from 'dotenv'
