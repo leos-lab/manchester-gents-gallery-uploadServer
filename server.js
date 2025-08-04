@@ -37,8 +37,12 @@ app.post('/upload', (req, res) => {
       return res.status(500).json({ error: 'Upload error' })
     }
 
+    console.log('🧾 Form fields:', fields)
+    console.log('📁 Form files:', files)
+
     const file = files?.file
     if (!file || !file.filepath) {
+      console.error('🚫 No valid file received')
       return res.status(400).json({ error: 'No file received' })
     }
 
@@ -59,6 +63,7 @@ app.post('/upload', (req, res) => {
         eventSlug: fields.eventSlug || 'unknown',
       })
 
+      console.log('✅ Upload successful:', doc._id)
       res.status(200).json({ success: true, docId: doc._id })
     } catch (err) {
       console.error('Upload failed:', err)
