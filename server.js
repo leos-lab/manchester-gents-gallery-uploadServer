@@ -14,7 +14,10 @@ const app = express();
 // ✅ Add full CORS middleware
 app.use(
   cors({
-    origin: "https://mgphoto-new.vercel.app",
+    origin: [
+      "https://mgphoto-new.vercel.app",
+      "http://localhost:3000"
+    ],
     methods: ["POST", "OPTIONS"],
   })
 );
