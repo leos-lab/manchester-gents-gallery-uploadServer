@@ -14,7 +14,7 @@ const app = express();
 // CORS for Vercel + localhost
 app.use(
   cors({
-    origin: ["https://mgphoto-new.vercel.app", "http://localhost:3000"],
+    origin: ["https://mgphoto-new.vercel.app", "http://localhost:3000", "https://photos.manchestergents.com/"],
     methods: ["POST", "OPTIONS"],
   })
 );
