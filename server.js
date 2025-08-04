@@ -11,18 +11,13 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Add full CORS middleware
 app.use(
   cors({
-    origin: [
-      "https://mgphoto-new.vercel.app",
-      "http://localhost:3000"
-    ],
+    origin: ["https://mgphoto-new.vercel.app", "http://localhost:3000"],
     methods: ["POST", "OPTIONS"],
   })
 );
 
-// ✅ Allow preflight OPTIONS on /upload
 app.options("/upload", cors());
 
 const client = createClient({
@@ -55,21 +50,40 @@ app.post("/upload", (req, res) => {
       return res.status(400).json({ error: "No file received" });
     }
 
+    if (!eventSlug) {
+      return res.status(400).json({ error: "Missing eventSlug" });
+    }
+
     try {
       const buffer = fs.readFileSync(file.filepath);
       const exif = await parse(buffer);
       const takenAt = exif?.DateTimeOriginal || new Date().toISOString();
 
+      // 🔍 Fetch event document _id by slug
+      const eventRef = await client.fetch(
+        '*[_type == "event" && slug.current == $slug][0]{ _id }',
+        { slug: eventSlug }
+      );
+
+      if (!eventRef?._id) {
+        return res.status(404).json({ error: "Event not found for given slug" });
+      }
+
+      // 📤 Upload image asset
       const asset = await client.assets.upload("image", buffer, {
         filename: file.originalFilename,
       });
 
+      // 📝 Create photo document with reference to event
       const doc = await client.create({
         _type: "photo",
         image: { asset: { _ref: asset._id, _type: "reference" } },
         takenAt,
         createdAt: new Date().toISOString(),
-        eventSlug: eventSlug || "unknown",
+        event: {
+          _type: "reference",
+          _ref: eventRef._id,
+        },
       });
 
       console.log("✅ Upload successful:", doc._id);
