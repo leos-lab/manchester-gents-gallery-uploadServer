@@ -10,7 +10,11 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: 'https://mgphoto-new.vercel.app',
+  methods: ['POST'],
+}))
+
 
 const client = createClient({
   projectId: process.env.SANITY_PROJECT_ID,
