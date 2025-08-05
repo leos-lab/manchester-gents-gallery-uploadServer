@@ -11,17 +11,32 @@ dotenv.config();
 
 const app = express();
 
-// CORS for Vercel + localhost
+// ✅ Allowed origins (no trailing slashes)
+const allowedOrigins = [
+  "https://mgphoto-new.vercel.app",
+  "http://localhost:3000",
+  "https://photos.manchestergents.com",
+];
+
+// ✅ CORS for Vercel + localhost
 app.use(
   cors({
-    origin: ["https://mgphoto-new.vercel.app", "http://localhost:3000", "https://photos.manchestergents.com/"],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("❌ Blocked CORS origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["POST", "OPTIONS"],
   })
 );
 
-// Preflight OPTIONS handler
+// ✅ Preflight handler
 app.options("/upload", cors());
 
+// 🔑 Sanity client
 const client = createClient({
   projectId: process.env.SANITY_PROJECT_ID,
   dataset: process.env.SANITY_DATASET,
@@ -30,6 +45,7 @@ const client = createClient({
   useCdn: false,
 });
 
+// 📤 Upload endpoint
 app.post("/upload", (req, res) => {
   const form = formidable({ multiples: false, keepExtensions: true });
 
@@ -61,7 +77,7 @@ app.post("/upload", (req, res) => {
       const exif = await parse(buffer);
       const takenAt = exif?.DateTimeOriginal || new Date().toISOString();
 
-      // 🔍 Find the event document by slug
+      // 🔍 Find event by slug
       const eventRef = await client.fetch(
         '*[_type == "event" && slug.current == $slug][0]{ _id }',
         { slug: eventSlug }
@@ -73,15 +89,15 @@ app.post("/upload", (req, res) => {
           .json({ error: "Event not found for given slug" });
       }
 
-      // 📤 Upload asset
+      // 🖼 Upload image to Sanity
       const asset = await client.assets.upload("image", buffer, {
         filename: file.originalFilename,
       });
 
-      // 📝 Create photo document with filename as `name`
+      // 📝 Create photo document
       const doc = await client.create({
         _type: "photo",
-        name: file.originalFilename, // ✅ assign the filename here
+        name: file.originalFilename,
         image: { asset: { _ref: asset._id, _type: "reference" } },
         takenAt,
         createdAt: new Date().toISOString(),
